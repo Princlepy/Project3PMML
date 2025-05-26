@@ -7,7 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 
 # === Load model ===
-with open('model.pkl', 'rb') as f:
+with open('model_pipeline.pkl', 'rb') as f:
     model = pickle.load(f)
 
 # === Fungsi kirim email ===
@@ -38,7 +38,7 @@ def kirim_email(ip, aktivitas):
 # === Load data log ===
 @st.cache_data
 def load_data():
-    return pd.read_csv('log_aktivitas.csv')
+    return pd.read_csv('DATASET IDS.csv')
 
 df = load_data()
 
