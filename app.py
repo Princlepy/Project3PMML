@@ -1,75 +1,56 @@
-import streamlit as st
-import pandas as pd
-import numpy as np
-import pickle
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
+# ======================================================================================
+# ANTARMUKA PENGGUNA (UI) - SIDEBAR INPUT
+# ======================================================================================
+model = load_model(MODEL_FILENAME)
 
-# === Load model ===
-with open('model_pipeline.pkl', 'rb') as f:
-    model = pickle.load(f)
+# --- BLOK DEBUGGING BARU DIMULAI DI SINI ---
+if model:
+    # Cek dan tampilkan jumlah fitur yang diharapkan model vs. yang disediakan
+    expected_features = model.n_features_in_
+    provided_features = len(FEATURE_ORDER)
 
-# === Fungsi kirim email ===
-def kirim_email(ip, aktivitas):
-    sender = "akunemailmu@gmail.com"
-    receiver = "penerima@gmail.com"
-    password = "app_password_gmailmu"  # Gunakan app password Gmail
+    st.info(f"✅ Model berhasil dimuat.")
+    st.info(f"Model ini dilatih dan mengharapkan persis **{expected_features}** fitur.")
+    st.info(f"Daftar `FEATURE_ORDER` Anda saat ini menyediakan **{provided_features}** fitur.")
 
-    subject = f"⚠️ Peringatan Aktivitas Mencurigakan dari IP {ip}"
-    body = f"Aktivitas mencurigakan terdeteksi:\n\nIP: {ip}\nAktivitas: {aktivitas}"
-
-    msg = MIMEMultipart()
-    msg["From"] = sender
-    msg["To"] = receiver
-    msg["Subject"] = subject
-    msg.attach(MIMEText(body, "plain"))
-
-    try:
-        server = smtplib.SMTP("smtp.gmail.com", 587)
-        server.starttls()
-        server.login(sender, password)
-        server.send_message(msg)
-        server.quit()
-        st.success("Email notifikasi berhasil dikirim.")
-    except Exception as e:
-        st.error(f"Gagal mengirim email: {e}")
-
-# === Load data log ===
-@st.cache_data
-def load_data():
-    return pd.read_csv('DATASET IDS.csv')
-
-df = load_data()
-
-# === Prediksi aktivitas mencurigakan ===
-fitur_model = df[['fitur1', 'fitur2', 'fitur3']]  # ganti sesuai kolom fitur
-prediksi = model.predict(fitur_model)
-df['Status'] = np.where(prediksi == 1, 'Mencurigakan', 'Normal')
-
-# === Streamlit UI ===
-st.title("🛡️ Dashboard IDS E-Commerce")
-
-st.subheader("📋 Log Aktivitas Terbaru")
-st.dataframe(df)
-
-# === Filter mencurigakan ===
-df_mencurigakan = df[df['Status'] == 'Mencurigakan']
-
-st.subheader("🚨 Aktivitas Mencurigakan Terdeteksi")
-st.write(f"Jumlah aktivitas mencurigakan: {len(df_mencurigakan)}")
-st.dataframe(df_mencurigakan)
-
-# === Daftar IP untuk pemblokiran ===
-st.subheader("⛔ Daftar IP Mencurigakan")
-daftar_ip = df_mencurigakan['ip'].unique()
-st.write(daftar_ip)
-
-# === Kirim notifikasi jika ada mencurigakan ===
-if st.button("🔔 Kirim Notifikasi Email untuk IP Mencurigakan"):
-    if len(df_mencurigakan) > 0:
-        for i, row in df_mencurigakan.iterrows():
-            kirim_email(row['ip'], row['aktivitas'])
+    # Jika jumlahnya tidak cocok, tampilkan pesan error besar dan jelas
+    if expected_features != provided_features:
+        st.error(
+            f"**STOP! JUMLAH FITUR TIDAK COCOK!**\n\n"
+            f"- Model Anda memerlukan: **{expected_features} fitur**.\n"
+            f"- `FEATURE_ORDER` Anda hanya memiliki: **{provided_features} fitur**.\n\n"
+            f"**Solusi:** Buka kembali file `app.py` dan perbaiki daftar `FEATURE_ORDER` agar berisi persis **{expected_features}** nama fitur dengan urutan yang benar."
+        )
     else:
-        st.info("Tidak ada aktivitas mencurigakan saat ini.")
+        # Jika sudah cocok, lanjutkan membuat form input
+        st.success("✅ Jumlah fitur sudah sesuai! Silakan isi form di sidebar.")
+        st.sidebar.header("Input Parameter Aktivitas Jaringan:")
+        user_inputs = {}
 
+        # Input Fields (sesuaikan dengan fitur Anda)
+        user_inputs['login_attempts'] = st.sidebar.number_input("Jumlah Percobaan Login (dalam 5 menit terakhir)", min_value=0, value=3, step=1)
+        user_inputs['failed_logins'] = st.sidebar.number_input("Jumlah Kegagalan Login (dalam 5 menit terakhir)", min_value=0, value=1, step=1)
+        user_inputs['ip_reputation_score'] = st.sidebar.slider("Skor Reputasi IP (0=Buruk, 100=Baik)", 0, 100, 80)
+        user_inputs['network_packet_size'] = st.sidebar.number_input("Ukuran Paket Jaringan Rata-rata (KB)", min_value=0.0, value=1.5, step=0.1, format="%.2f")
+
+        # Categorical Features (perlu di-encode)
+        unusual_time_map = {"Tidak": 0, "Ya": 1}
+        user_inputs['unusual_time_access'] = unusual_time_map[st.sidebar.radio("Akses di Waktu Tidak Biasa?", ("Tidak", "Ya"))]
+
+        browser_options = ["Chrome", "Firefox", "Safari", "Edge", "Lainnya/Unknown"]
+        browser_map = {name: i for i, name in enumerate(browser_options)}
+        selected_browser = st.sidebar.selectbox("Tipe Browser", options=browser_options)
+        user_inputs['browser_type'] = browser_map.get(selected_browser, len(browser_options)-1)
+
+        protocol_options = ["TCP", "UDP", "HTTP", "HTTPS", "ICMP"]
+        protocol_map = {name: i for i, name in enumerate(protocol_options)}
+        selected_protocol = st.sidebar.selectbox("Tipe Protokol", options=protocol_options)
+        user_inputs['protocol_type'] = protocol_map.get(selected_protocol, 0)
+
+        encryption_options = ["AES", "DES", "TLS", "Tidak Ada"]
+        encryption_map = {name: i for i, name in enumerate(encryption_options)}
+        selected_encryption = st.sidebar.selectbox("Jenis Enkripsi yang Digunakan", options=encryption_options)
+        user_inputs['encryption_used'] = encryption_map.get(selected_encryption, len(encryption_options)-1)
+
+        # Tombol Analisis (dan sisa kode setelahnya tetap sama)
+        # ...
