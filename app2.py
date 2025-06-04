@@ -1,0 +1,130 @@
+# ======================================================================================
+# app.py - VERSI FINAL DENGAN 12 FITUR YANG BENAR
+# ======================================================================================
+import streamlit as st
+import pandas as pd
+import joblib
+import numpy as np
+import os
+import datetime
+
+# ======================================================================================
+# KONFIGURASI PUSAT
+# ======================================================================================
+
+MODEL_FILENAME = 'best_random_forest_model.pkl'
+
+# INI ADALAH DAFTAR 17 FITUR YANG PASTI DAN BENAR DARI NOTEBOOK ANDA
+FEATURE_ORDER = [
+    'num__login_attempts',
+    'num__failed_logins',
+    'num__ip_reputation_score',
+    'num__network_packet_size',
+    'cat__unusual_time_access',
+    'cat__browser_type_Chrome',
+    'cat__browser_type_Firefox',
+    'cat__browser_type_Edge',
+    'cat__browser_type_Safari',
+    'cat__browser_type_Unknown',
+    'cat__protocol_type_TCP',
+    'cat__protocol_type_UDP',
+    'cat__protocol_type_ICMP',
+    'cat__encryption_used_AES',
+    'cat__encryption_used_DES',
+    'cat__encryption_used_None',
+    '17','18','19','20'
+]
+
+# ======================================================================================
+# FUNGSI UTAMA
+# ======================================================================================
+
+@st.cache_resource
+def load_model(model_path):
+    if not os.path.exists(model_path):
+        st.error(f"File model '{model_path}' tidak ditemukan.")
+        return None
+    try:
+        model = joblib.load(model_path)
+        # Verifikasi terakhir untuk memastikan
+        if model.n_features_in_ != len(FEATURE_ORDER):
+            st.error(f"FATAL: Model butuh {model.n_features_in_} fitur, tapi FEATURE_ORDER hanya punya {len(FEATURE_ORDER)}.")
+            return None
+        return model
+    except Exception as e:
+        st.error(f"Error saat memuat model: {e}")
+        return None
+
+if 'activity_log' not in st.session_state:
+    st.session_state.activity_log = []
+
+# ======================================================================================
+# ANTARMUKA PENGGUNA (UI)
+# ======================================================================================
+
+st.set_page_config(page_title="IDS Dashboard", page_icon="🛡️", layout="wide")
+st.title("🛡️ Intrusion Detection System (IDS) Dashboard")
+
+model = load_model(MODEL_FILENAME)
+
+if model:
+    st.sidebar.header("Input Parameter Aktivitas Jaringan:")
+    
+    # Kumpulkan pilihan pengguna di sini
+    # Hanya minta input untuk fitur ASLI (sebelum di-encode)
+    user_selections = {}
+    user_selections['num__login_attempts'] = st.sidebar.number_input("Jumlah Percobaan Login", value=4)
+    user_selections['num__failed_logins'] = st.sidebar.number_input("Jumlah Kegagalan Login", value=2)
+    user_selections['num__ip_reputation_score'] = st.sidebar.slider("Skor Reputasi IP", 0, 100, 35)
+    user_selections['num__network_packet_size'] = st.sidebar.number_input("Ukuran Paket Jaringan (KB)", value=500)
+    
+    # Opsi HARUS SAMA dengan yang ada di nama fitur Anda
+    user_selections['cat__unusual_time_access'] = st.sidebar.radio("Akses di Waktu Tidak Biasa?", ("Tidak", "Ya"))
+    user_selections['cat__browser_type'] = st.sidebar.selectbox("Tipe Browser", ["Chrome", "Firefox", "Edge", "Safari", "Unknown"]) # Hanya ada 2 opsi ini di model Anda
+    user_selections['cat__protocol_type'] = st.sidebar.selectbox("Tipe Protokol", ["TCP", "UDP", "ICMP"]) # Hanya ada 2 opsi ini
+    user_selections['cat__encryption_used'] = st.sidebar.selectbox("Tipe Enkripsi", ["AES", "DES", "None"]) # Hanya ada 2 opsi ini
+
+    if st.sidebar.button("Analisis Aktivitas", type="primary", use_container_width=True):
+        
+        # Siapkan dictionary final untuk input model
+        final_model_inputs = {}
+
+        # Proses input untuk model
+        for feature in FEATURE_ORDER:
+            # Fitur numerik
+            if feature.startswith('num__'):
+                final_model_inputs[feature] = user_selections.get(feature, 0)
+
+            # Menangani kasus khusus untuk fitur biner 'unusual_time_access'
+            elif feature == 'cat__unusual_time_access':
+                final_model_inputs[feature] = 1 if user_selections.get('cat__unusual_time_access') == "Ya" else 0
+            
+            # Fitur kategorikal one-hot-encoded lainnya
+            elif feature.startswith('cat__'):
+                try:
+                    base_feature_name, value = feature.rsplit('_', 1)
+                    user_choice = user_selections.get(base_feature_name)
+                    final_model_inputs[feature] = 1 if user_choice == value else 0
+                except ValueError:
+                    st.warning(f"Format fitur '{feature}' tidak dikenali. Diatur ke 0.")
+                    final_model_inputs[feature] = 0
+            
+            # Safety net untuk fitur tak dikenal
+            else:
+                final_model_inputs[feature] = 0
+
+        # Buat input array
+        input_array = np.array([final_model_inputs[feature] for feature in FEATURE_ORDER]).reshape(1, -1)
+        
+        # Prediksi
+        prediction = model.predict(input_array)
+        prediction_proba = model.predict_proba(input_array)
+        
+        is_threat = (prediction[0] == 1)
+        st.subheader("Hasil Analisis:")
+        if is_threat:
+            st.error("🔴 Terdeteksi Potensi Ancaman!", icon="🚨")
+            st.metric("Tingkat Kepercayaan Ancaman", f"{prediction_proba[0][1]*100:.2f}%")
+        else:
+            st.success("✅ Aktivitas Jaringan Terlihat Normal.", icon="👍")
+            st.metric("Tingkat Kepercayaan Normal", f"{prediction_proba[0][0]*100:.2f}%")
