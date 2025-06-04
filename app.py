@@ -3,6 +3,9 @@ import pandas as pd
 import joblib
 import numpy as np
 import os
+# Untuk grafik tambahan, mungkin perlu import:
+import matplotlib.pyplot as plt
+import seaborn as sns
 # import datetime # Tidak digunakan secara langsung di bagian ini, tapi bisa relevan untuk logging
 
 # ======================================================================================
@@ -279,6 +282,4 @@ else:
 st.markdown("---")
 st.caption("Dashboard IDS v0.3 | Dibuat dengan Streamlit")
 
-# Untuk grafik tambahan, mungkin perlu import:
-import matplotlib.pyplot as plt
-import seaborn as sns
+
