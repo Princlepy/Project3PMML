@@ -8,7 +8,7 @@ import os
 # ======================================================================================
 # KONFIGURASI PUSAT (DARI KODE ANDA)
 # ======================================================================================
-MODEL_FILENAME = 'best_random_forest_model.pkl' # Pastikan file ini ada di direktori yang sama atau berikan path lengkap
+MODEL_FILENAME = 'best_random_forest_model(1).pkl' # Pastikan file ini ada di direktori yang sama atau berikan path lengkap
 
 # DAFTAR FITUR YANG DIHARAPKAN MODEL (SETELAH ONE-HOT ENCODING)
 FEATURE_ORDER = [
@@ -245,4 +245,36 @@ if model:
 
                             if jumlah_terancam > 0:
                                 st.write("Distribusi Tingkat Kepercayaan untuk Data Terancam:")
-                                data_terancam_probs = df_tampilan_akhir[df_tampilan_akhir['Status Deteksi'] == 'Terancam']['T
+                                data_terancam_probs = df_tampilan_akhir[df_tampilan_akhir['Status Deteksi'] == 'Terancam']['Tingkat Kepercayaan Ancaman (%)']
+                                st.bar_chart(data_terancam_probs, color="#FF4B4B")
+                            
+                            # Tambahan statistik deskriptif untuk salah satu fitur numerik
+                            # Bisa diperluas untuk fitur lain atau visualisasi lain
+                            if 'num__network_packet_size' in df_tampilan_akhir.columns:
+                                st.subheader("Analisis 'Ukuran Paket Jaringan (KB)':")
+                                fig, ax = plt.subplots() # Menggunakan matplotlib untuk kustomisasi lebih
+                                sns.histplot(data=df_tampilan_akhir, x='num__network_packet_size', hue='Status Deteksi', kde=True, ax=ax, palette={"Aman":"#3DDC97", "Terancam":"#FF4B4B"})
+                                ax.set_title('Distribusi Ukuran Paket Jaringan berdasarkan Status Deteksi')
+                                st.pyplot(fig)
+
+
+        except pd.errors.ParserError:
+            st.error("Gagal mem-parsing file. Pastikan format CSV/Excel benar dan tidak korup.")
+        except KeyError as e:
+            st.error(f"Kolom yang dibutuhkan tidak ditemukan di dataset: {e}. "
+                       "Mohon periksa nama kolom di file Anda sesuai dengan yang diinstruksikan di sidebar.")
+        except Exception as e:
+            st.error(f"Terjadi kesalahan saat memproses file: {e}")
+            st.error("Pastikan format file dan nama kolom sudah benar.")
+    else:
+        st.info("Silakan unggah dataset (file .csv atau .xlsx) melalui panel di sebelah kiri untuk memulai analisis.")
+
+else:
+    st.warning("Model tidak berhasil dimuat. Fungsi analisis tidak tersedia.")
+
+st.markdown("---")
+st.caption("Dashboard IDS v0.3 | Dibuat dengan Streamlit")
+
+# Untuk grafik tambahan, mungkin perlu import:
+import matplotlib.pyplot as plt
+import seaborn as sns
