@@ -8,7 +8,7 @@ import os
 # ======================================================================================
 # KONFIGURASI PUSAT (DARI KODE ANDA)
 # ======================================================================================
-MODEL_FILENAME = 'best_random_forest_model(1).pkl' # Pastikan file ini ada di direktori yang sama atau berikan path lengkap
+MODEL_FILENAME = 'best_random_forest_model.pkl' # Pastikan file ini ada di direktori yang sama atau berikan path lengkap
 
 # DAFTAR FITUR YANG DIHARAPKAN MODEL (SETELAH ONE-HOT ENCODING)
 FEATURE_ORDER = [
