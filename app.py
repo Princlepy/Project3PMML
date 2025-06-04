@@ -27,7 +27,11 @@ FEATURE_ORDER = [
     'cat__protocol_type_ICMP',
     'cat__encryption_used_AES',
     'cat__encryption_used_DES',
-    'cat__encryption_used_None' # Perhatikan ini
+    'cat__encryption_used_None', # Perhatikan ini
+    '17',
+    '18',
+    '19',
+    '20'
 ]
 
 # Fitur asli sebelum di-encode (digunakan untuk input pengguna dan pemetaan)
